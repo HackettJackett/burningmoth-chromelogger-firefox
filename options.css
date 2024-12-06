@@ -1,0 +1,43 @@
+@charset "UTF-8";
+/**
+ * Options page styles.
+ * @since 3.0
+ */
+
+body {
+	color: var(--color-fg);
+	background-color: var(--color-bg);
+}
+
+fieldset {
+	border: solid 1px var(--color-fg);
+	border-radius: 3px;
+	clear: both;
+	margin-bottom: 1em;
+}
+
+legend {
+	color: var(--color-fg);
+}
+
+fieldset > label,
+fieldset > label + * {
+	display: block;
+	float: left;
+}
+
+fieldset > label {
+	width: 30%;
+	text-align: right;
+	margin-right: 1%;
+}
+
+fieldset > label + * {
+	width: 60%;
+	clear: right;
+	margin-bottom: 1em;
+}
+
+fieldset > label + *:last-child {
+	margin-bottom: 0em;
+}

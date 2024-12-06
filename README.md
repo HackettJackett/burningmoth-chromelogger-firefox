@@ -27,3 +27,9 @@ Or just log the `rows` array of the ChromeLoggerData object. Attributes `data-ch
 	>[ ChromeLoggerData.rows array ]</script>
 
 `<script>` values must be valid JSON or error is thrown.
+
+## Using ChromeLogger DevTools Panel
+
+A ChromeLogger `devtools.panel` is provided to display ChromeLoggerData messages when open or that Firefox fails to log to the web console -- in which case a notice is displayed to prompt the user to open the ChromeLogger panel.
+
+In addition to supporting standard `console` methods, passing a valid XML string with `dir` or `dirxml` methods will attempt to display an interactive tree -- which is not yet a feature of Firefox's web console as of this writing.

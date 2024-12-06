@@ -12,7 +12,7 @@
 function populateForm( opts ) {
 
 	// populate substitution styles ...
-	Object.entries(opts.console_substitution_styles).forEach(([key, value])=>{
+	Object.entries(opts.console_substitution_styles).forEach(([ key, value ])=>{
 		let input = document.querySelector( 'input#console_substitution_styles-'.concat(key) );
 		if ( input ) {
 			input.value = value;
@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", event=>{
 	// populate form from options ...
 	browser.storage.sync.get(DEFAULT_OPTIONS)
 	.then(populateForm)
-	.catch(error=>{ console.error(error); });
+	.catch(error=>console.error(error));
 
 	// onsubmit ...
 	document.querySelector("form").addEventListener("submit", event=>{
@@ -49,14 +49,15 @@ document.addEventListener("DOMContentLoaded", event=>{
 		event.preventDefault();
 
 		// reset ...
-		if ( event.explicitOriginalTarget.id == 'reset' ) {
+		if ( event.submitter.id == 'reset' ) {
 
 			// set from default options ? update form from default options ...
 			browser.storage.sync.set(DEFAULT_OPTIONS)
 			.then(()=>{
 				populateForm(DEFAULT_OPTIONS);
+				alert('Settings have been reset!');
 			})
-			.catch(error=>{ console.error(error); });
+			.catch(error=>console.error(error));
 
 		}
 
@@ -68,7 +69,7 @@ document.addEventListener("DOMContentLoaded", event=>{
 
 			// update collection ...
 			console_substitution_style_inputs.forEach(input=>{
-				console_substitution_styles[ input.id.substr( input.id.indexOf('-') + 1 ) ] = input.value;
+				console_substitution_styles[ input.id.substring( input.id.indexOf('-') + 1 ) ] = input.value;
 			});
 
 			// save settings ...
@@ -81,7 +82,8 @@ document.addEventListener("DOMContentLoaded", event=>{
 				display_data_url: document.querySelector("form input#display_data_url").checked,
 
 			})
-			.catch(error=>{ console.error(error); });
+			.then(()=>{ alert('Settings saved!'); })
+			.catch(error=>console.error(error));
 
 		}
 

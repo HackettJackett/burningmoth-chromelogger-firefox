@@ -1,51 +1,17 @@
-<!doctype html>
+<!DOCTYPE html>
 <!--/**
  * Extension options page.
  * @since 1.5
  * @since 1.7
  *	- added classname styles.
-*/-->
+ * @since 3.0
+ * 	- moved styles to options.css
+ */-->
 <html>
 	<head>
-		<title>ChromeLogger Options</title>
 		<meta charset="utf-8"/>
-		<style type="text/css">
-
-			fieldset {
-				border: solid 1px lightgrey;
-				border-radius: 3px;
-				background-color: white;
-				clear: both;
-				margin-bottom: 1em;
-			}
-
-			legend {
-				color: grey;
-			}
-
-			fieldset > label,
-			fieldset > label + * {
-				display: block;
-				float: left;
-			}
-
-			fieldset > label {
-				width: 30%;
-				text-align: right;
-				margin-right: 1%;
-			}
-
-			fieldset > label + * {
-				width: 60%;
-				clear: right;
-				margin-bottom: 1em;
-			}
-
-			fieldset > label + *:last-child {
-				margin-bottom: 0em;
-			}
-
-		</style>
+		<link rel="stylesheet" href="global.css"/>
+		<link rel="stylesheet" href="options.css"/>
 		<script type="text/javascript" src="global.js"></script>
 		<script type="text/javascript" src="options.js"></script>
 	</head>
@@ -68,6 +34,9 @@
 
 			<label for="console_substitution_styles-log">Console.log()</label>
 			<input type="text" id="console_substitution_styles-log"/>
+
+			<label for="console_substitution_styles-debug">Console.debug()</label>
+			<input type="text" id="console_substitution_styles-debug"/>
 
 			<label for="console_substitution_styles-group">Console.group()</label>
 			<input type="text" id="console_substitution_styles-group"/>

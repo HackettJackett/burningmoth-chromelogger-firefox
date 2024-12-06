@@ -1,5 +1,12 @@
 # Chrome Logger Firefox WebExtension Change Log
 
+### 2024 Sep 25 / Version 3.0
+* Removed: fallback behavior of executing eval'd code against the activeTab via devtools when log.js content script fails to inject (as in the case of JSON viewer UI) as Firefox has finally disabled this functionality (whilst providing no recourse in the 5 years since this was last updated).
+* Added: devtools.panel displaying parsed ChromeLogger data instead of devtools webconsole when log.js content script fails to inject or it happens to be open.
+* Added: style substitutions support for `console.debug()`.
+* Updated: options supports light/dark themes.
+* Fixed: options reset button didn't work.
+
 ### 2019 Nov 24 / Version 2.0
 * Removed: `<script[data-chromelogger-data]>` and `<script[data-chromelogger-rows]>` node parsing.
 * Added: `<script[type="application/json"]#chromelogger>` node parsing.

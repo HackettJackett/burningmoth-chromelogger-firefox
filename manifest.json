@@ -1,7 +1,7 @@
 {
 	"manifest_version": 2,
 	"name": "ChromeLogger",
-	"version": "2.0",
+	"version": "3.0",
 	"description": "Parses and displays messages from X-ChromeLogger-Data and X-ChromePHP-Data headers in DevTools Web Console facilitating server-side debugging via the Chrome Logger protocol ( https://craig.is/writing/chrome-logger/ ).",
 	"homepage_url": "https://github.com/burningmoth/burningmoth-chromelogger-firefox",
 	"author": "Tarraccas Obremski",
@@ -12,9 +12,11 @@
 
 	"permissions": [
 		"<all_urls>",
+		"activeTab",
 		"webRequest",
 		"webNavigation",
-		"storage"
+		"storage",
+		"notifications"
 	],
 
 	"options_ui": {
@@ -23,7 +25,7 @@
 
 	"devtools_page": "dev.html",
 
-	"applications": {
+	"browser_specific_settings": {
 		"gecko": {
 			"id": "chromelogger@burningmoth.com"
 		}

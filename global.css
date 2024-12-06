@@ -1,0 +1,17 @@
+/**
+ * Global Styles.
+ * @since 3.0
+ */
+:root {
+	--color-fg: #fbfbfe;
+	--color-bg: #1c1b22;
+}
+
+@media ( prefers-color-scheme: light ) {
+
+	:root {
+		--color-fg: #15141a;
+		--color-bg: #f0f0f4;
+	}
+
+}

@@ -1,5 +1,37 @@
 "use strict";
 /**
+ * Content script injected to bounce messages to devtools web console.
+ */
+
+/**
+ * Array.map callback
+ * Removes "__proto__" and "length" properties from objects and arrays.
+ * @since 1.3
+ * @since 3.0
+ * 	- moved from global.js to log.js (no longer used in dev.js)
+ * @param mixed obj
+ * @return mixed
+  */
+function cleanObjectProperties( obj ) {
+
+	// not an object ? return as-is ...
+	if ( typeof obj !== 'object' || obj === null ) return obj;
+
+	// removes length property from arrays ...
+	if ( Array.isArray(obj) ) obj = Object.assign({}, obj);
+
+	// remove annoying __proto__ property ...
+	obj.__proto__ = null;
+
+	// recurse through properties ...
+	Object.entries(obj).forEach(([ key, value ])=>{ obj[ key ] = cleanObjectProperties( value ); });
+
+	// return cloned object ...
+	return obj;
+
+}
+
+/**
  * Injection script.
  *
  * @since 1.0

@@ -7,9 +7,9 @@
 /**
  * Connects the tab these devtools are open on to the background and content scripts via runtime.onConnect
  * @since 1.0
- * @var runtime.Port
+ * @const runtime.Port
  */
-var port = browser.runtime.connect({
+const port = browser.runtime.connect({
 	// this is used as a tab key to mark open console sessions and derive the tabId from ...
 	name: 'tab' + browser.devtools.inspectedWindow.tabId
 });
@@ -41,31 +41,42 @@ port.onDisconnect.addListener(( port ) => {
  *	- parse <script[data-chromelogger-data]> nodes.
  * @since 2.0
  *	- removed details.processContentUrl processing, moved to log.js
+ * @since 3.0
+ * 	- removed browser.devtools.inspectedWindow.eval() fallback as Firefox has remove access to any URL the browser loads a custom UI for (JSON, PDF, etc.) replacing the existing document
  *
  * @param tabs.onHeadersReceived|ChromeLoggerData details
  */
-port.onMessage.addListener(( details ) => {
+port.onMessage.addListener(( details )=>{
 
 	// details contains response headers ? bounce back to background script for processing ...
 	if ( details.responseHeaders ) port.postMessage( details );
 
-	// ChromeLoggerData ? sent here if log.js fails to inject into the tab ...
-	else if ( details.args ) {
-
-		browser.devtools.inspectedWindow.eval(
-			'(function(){ '
-				+ cleanObjectProperties.toString() + ' '
-				+ JSON.stringify(details.args) + '.forEach(args=>{ '
-					+ 'try { '
-						+ 'console[ args.shift() ].apply(null, args.map(cleanObjectProperties)); '
-					+ '} catch ( error ) { console.error(error); } '
-				+ '}); '
-				+ 'return true; '
-			+ '})();'
-		).then(([ success, failure ])=>{
-			if ( failure ) console.error(failure);
-		});
-
-	}
-
 });
+
+
+/**
+ * Indicate that the panel has been toggled on/off
+ * @since 3.0
+ * @param bool toggle
+ */
+function onPanelToggle( toggle ) {
+	port.postMessage({
+		tabId: browser.devtools.inspectedWindow.tabId,
+		panel: toggle
+	});
+}
+
+
+/**
+ * Create ChromeLogger devtools panel
+ * @since 3.0
+ */
+browser.devtools.panels.create(
+    browser.runtime.getManifest().name,
+    "icon.svg",
+    "panel.html",
+).then(( panel )=>{
+    panel.onShown.addListener(( event )=>onPanelToggle(true));
+    panel.onHidden.addListener(( event )=>onPanelToggle(false));
+});
+

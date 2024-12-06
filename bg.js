@@ -1,7 +1,7 @@
 "use strict";
 /**
  * Background script.
- * All the routine heavy lifting should be done here and the results coordinated betweent dev.js devtools script and log.js content script.
+ * All the routine heavy lifting should be done here and the results coordinated betweent dev.js devtools script and log.js content script or panel.js devtools.panel UI.
  */
 
 /**
@@ -9,7 +9,7 @@
  * @since 1.0
  * @var object tabs
  */
-var tabs = {};
+const tabs = {};
 
 
 /**
@@ -50,6 +50,9 @@ function tabFromId( tabId ) {
  * @since 1.0
  * @since 2.0
  *	- removed processContentUrl() method, functionality moved to log.js
+ * @since 3.0
+ * 	- removed fallback functionality (no longer supported by Firefox!)
+ * 	- added devtools.panel functionality
  */
 class Tab {
 
@@ -89,13 +92,6 @@ class Tab {
 		this.ready = false;
 
 		/**
-		 * Fallback to devtools for reporting should log.js script injection fail onDOMReady.
-		 * @since 1.2
-		 * @var bool
-		 */
-		this.fallback = false;
-
-		/**
 		 * Sends header details to devtools which, if open, will send them back to onDevPortMessage()
 		 * @since 1.0
 		 * @param webRequest.onHeadersReceived details
@@ -106,30 +102,75 @@ class Tab {
 			tabs[ tabKeyFromId( details.tabId ) ].devPort.postMessage( details );
 		}
 
+		/**
+		 * Is panel.html displayed?
+		 * @var bool
+		 * @since 3.0
+		 */
+		this.panel = false;
+
 	}
 
-
 	/**
-	 * Logs data to log.js
+	 * Logs data to log.js or panel ...
 	 * @since 1.0
 	 * @since 1.2
 	 *	- send data back on port if Tab.fallback == true
+	 * @since 3.0
+	 * 	- removed Tab.fallback condition, behavior.
+	 * 	- added Tab.panel condition, behavior.
+	 * 	- attempts to send data to panel or tab before storing to pending and send later to panel or tab (whichever resolves first)
 	 * @param object data
 	 *	- ChromeLogger Data
 	 */
 	log( data ){
 
-		// tab is DOMReady ? send to log.js now !
-		if ( this.ready ) browser.tabs.sendMessage( this.id, data );
-
-		// fallback to devtools.inspectedWindow.eval() ? send back through the port now !
-		else if ( this.fallback ) this.devPort.postMessage( data );
-
-		// tab document still loading ! queue in pending data to be sent by tabs.onUpdated listener on complete
-		else this.pending.push( data );
+		// can't send to panel or tab ? save to pending ...
+		if ( ! ( this.sendPanel(data) || this.sendTab(data) ) ) this.pending.push( data );
 
 	}
 
+	/**
+	 * Send message data to tab log.js if ready.
+	 * @since 3.0
+	 * @param object data
+	 * @return bool
+	 */
+	sendTab( data ){
+		if ( this.ready ) browser.tabs.sendMessage( this.id, data );
+		return this.ready;
+	}
+
+	/**
+	 * Send message data to panel if open.
+	 * @since 3.0
+	 * @param object data
+	 * @return bool
+	 */
+	sendPanel( data ){
+		if ( this.panel ) {
+			data.tabId = this.id;
+			browser.runtime.sendMessage( data );
+		}
+		return this.panel;
+	}
+
+	/**
+	 * Clear panel console of messages.
+	 * @since 3.0
+	 */
+	clearPanel(){
+		this.sendPanel({args:[['clear']]});
+	}
+
+	/**
+	 * Toggle panel.
+	 * @since 3.0
+	 * @param bool toggle
+	 */
+	togglePanel( toggle ){
+		this.sendPanel({toggle:toggle});
+	}
 
 }
 
@@ -141,10 +182,14 @@ class Tab {
  */
 function onTabRemoved( tabId ) {
 
-	var tabKey = tabKeyFromId(tabId),
-		tab = tabs[ tabKey ];
+	const
+	tabKey = tabKeyFromId( tabId ),
+	tab = tabs[ tabKey ];
 
 	if ( tab ) {
+
+		// remove panel console ...
+		tab.togglePanel(false);
 
 		// disconnect ports ...
 		tab.devPort.disconnect();
@@ -169,7 +214,7 @@ function onTabRemoved( tabId ) {
  */
 function processChromeLoggerData( data ) {
 
-	return new Promise( resolve => {
+	return new Promise(( resolve )=>{
 
 		// load options, process data, pass to Tab.log() ...
 		browser.storage.sync.get(DEFAULT_OPTIONS).then(opts=>{
@@ -179,11 +224,11 @@ function processChromeLoggerData( data ) {
 				! data.columns
 				|| ! Array.isArray(data.columns)
 				? [ 'log', 'backtrace', 'type' ]
-				: data.columns.map(column=>{ return column.toLowerCase(); })
+				: data.columns.map(column=>column.toLowerCase())
 			);
 
 			// map to rows array to console method args ...
-			data.args = data.rows.map(row=>{
+			data.args = data.rows.map(( row )=>{
 
 				// convert row to object w/columns mapped to properties ...
 				row = row.reduce(function( row, value, index ){
@@ -191,7 +236,7 @@ function processChromeLoggerData( data ) {
 					return row;
 				}, { 'log': [], 'backtrace': false, 'type': 'log' });
 
-				var
+				let
 
 				// console method / @see https://developer.mozilla.org/en-US/docs/Web/API/Console
 				method = row.type,
@@ -210,7 +255,7 @@ function processChromeLoggerData( data ) {
 
 				// ensure method is valid ...
 				if (
-					typeof method != 'string'
+					typeof method !== 'string'
 					|| ! console[ method ]
 				) method = 'log';
 
@@ -218,17 +263,20 @@ function processChromeLoggerData( data ) {
 				if ( ! Array.isArray(args) ) args = [ args ];
 
 				// assertion ? ...
-				if ( method == 'assert' ) {
+				if ( method === 'assert' ) {
+
 					// resolves true ? log nothing ...
 					if ( args.shift() ) return false;
+
 					// false ! log error ...
 					else method = 'error';
+
 				}
 
 				// process arguments ...
 				if (
 					args.length > 0
-					&& [ 'log', 'info', 'warn', 'error', 'group', 'groupCollapsed' ].includes(method)
+					&& [ 'debug', 'log', 'info', 'warn', 'error', 'group', 'groupCollapsed' ].includes(method)
 				) {
 
 					// detect, passthru an existing substitution pattern ...
@@ -247,7 +295,7 @@ function processChromeLoggerData( data ) {
 						tmpl_pattern = [];
 
 						// populate pattern and args arrays ...
-						args.forEach(arg=>{
+						args.forEach(( arg )=>{
 
 							switch ( typeof arg ) {
 
@@ -274,9 +322,12 @@ function processChromeLoggerData( data ) {
 
 									// resolves to true (not null or undefined) and has special class name property ? prepend and remove ...
 									if ( arg && arg.hasOwnProperty('___class_name') ) {
+
 										tmpl_pattern.push('%c%s%c');
 										tmpl_args.push(opts.console_substitution_styles.classname, arg.___class_name, '');
+
 										delete arg.___class_name;
+
 									}
 									// no break, passthru ...
 
@@ -347,10 +398,14 @@ function processChromeLoggerData( data ) {
  *	- logs details url, method separately as chromelogger data
  * @since 2.0
  *	- removed capturing details.rows from dev.js
+ * @since 3.0
+ * 	- added details.panel behavior
  *
  * @param tabs.onHeadersReceived details
  */
 function onDevPortMessage( details ) {
+
+	const tab = tabFromId( details.tabId );
 
 	// details object passed through the open devtools ...
 	if ( details.responseHeaders ) {
@@ -400,6 +455,25 @@ function onDevPortMessage( details ) {
 
 	}
 
+	// toggle panel ? ...
+	else if ( typeof details.panel !== undefined ) {
+
+		// set panel property ...
+		tab.panel = Boolean( details.panel );
+
+		// open ? ...
+		if ( tab.panel ) {
+
+			// prepare panel console ...
+			tab.togglePanel(true);
+
+			// send pending items to panel ...
+			while ( tab.pending.length ) tab.sendPanel( tab.pending.shift() );
+
+		}
+
+	}
+
 }
 
 
@@ -429,11 +503,12 @@ function onDevPortDisconnect( port ) {
  *
  * @param runtime.Port port
  */
-browser.runtime.onConnect.addListener(( port ) => {
+browser.runtime.onConnect.addListener(( port )=>{
 
-	var tabId = tabIdFromPort(port),
-		tabKey = port.name,
-		tab = tabs[ tabKey ];
+	let
+	tabId = tabIdFromPort(port),
+	tabKey = port.name,
+	tab = tabs[ tabKey ];
 
 	// ports change when devtools are closed/opened so [re]assign port event handlers ...
 	port.onDisconnect.addListener(onDevPortDisconnect);
@@ -441,6 +516,7 @@ browser.runtime.onConnect.addListener(( port ) => {
 
 	// no tab ? create it ...
 	if ( ! tab ) tab = tabs[ tabKey ] = new Tab( tabId, port );
+
 	// update existing port ...
 	else tab.devPort = port;
 
@@ -461,17 +537,13 @@ browser.runtime.onConnect.addListener(( port ) => {
 
 /**
  * Listener / receives ChromeLoggerData objects from log.js parsed from document.
- *
  * @since 2.0
- *
  * @param ChromeLoggerData details
  */
 browser.runtime.onMessage.addListener(( details )=>{
-
 	processChromeLoggerData( details ).then(data=>{
 		tabFromId( details.tabId ).log( data );
 	});
-
 });
 
 
@@ -486,14 +558,28 @@ browser.tabs.onRemoved.addListener(onTabRemoved);
 
 
 /**
- * Reset tab ready state.
+ * Listener / opens corresponding panel console when active tab is changed.
+ * @since 3.0
+ * @param object info
+ */
+browser.tabs.onActivated.addListener(( info )=>{
+	const tab = tabFromId(info.tabId);
+	if ( tab ) tab.togglePanel(true);
+});
+
+
+/**
+ * Listender / Reset tab before it updates.
  * @since 1.1
+ * @since 3.0
+ * 	- added clear panel
+ * 	- removed deprecated fallback condition
  */
 browser.webNavigation.onBeforeNavigate.addListener(( details )=>{
-	var tab = tabFromId( details.tabId );
+	let tab = tabFromId( details.tabId );
 	if ( tab && details.frameId == 0 ) {
 		tab.ready = false;
-		tab.fallback = false;
+		tab.clearPanel();
 	}
 });
 
@@ -507,45 +593,46 @@ browser.webNavigation.onBeforeNavigate.addListener(( details )=>{
  *	- finally tell tab to process loaded DOM content for additional info to log
  * @since 2.0
  *	- moved DOM content processing from dev.js to log.js
+ * @since 3.0
+ * 	- removed Tab.fallback behavior as Firefox updated to block it
  */
 browser.webNavigation.onDOMContentLoaded.addListener(( details )=>{
 
-	var tab = tabFromId( details.tabId );
-	if (
-		tab
-		&& details.frameId == 0 // main tab document ...
-	) {
+	const tab = tabFromId( details.tabId );
+
+	if ( tab && details.frameId == 0 ) {
+
+		/* @warning browser.scripting (which would be nice here) requires manifest 3 and a complete overhaul of processes and inclusion of a more obtrusive permission system (TL;DR: it breaks the absolute shit out of everything) */
 
 		// inject log.js to receive messages sent to tab ? ...
 		browser.tabs.executeScript( details.tabId, { file: '/log.js' })
 		.then(()=>{
 
-			// load global functions required by log.js / assume this works at this point ...
-			browser.tabs.executeScript( details.tabId, { file: '/global.js' })
-			.finally(()=>{
+			// update ready state ...
+			tab.ready = true;
 
-				// update ready state ...
-				tab.ready = true;
+			// send any pending items ...
+			while ( tab.pending.length ) tab.sendTab( tab.pending.shift() );
 
-				// send any pending items ...
-				while ( tab.pending.length ) browser.tabs.sendMessage( details.tabId, tab.pending.shift() );
+			// tell tab to parse any items from the document itself ...
+			tab.sendTab({ tabId: details.tabId });
 
-				// tell tab to parse any items from the document itself ...
-				browser.tabs.sendMessage( details.tabId, { tabId: details.tabId });
+		}).catch(( failure )=>{
 
+			//console.error(failure);
+
+			// panel not open ? notify user to do that now ...
+			if ( ! tab.panel ) browser.notifications.create(null, {
+				type: "basic",
+				iconUrl: browser.runtime.getURL("icon.svg"),
+				title: browser.runtime.getManifest().name,
+				message: `Open the ${browser.runtime.getManifest().name} DevTools panel to view messages logged by this page.`
 			});
-
-		// unable to inject script ! fallback to devtools functions ...
-		}).catch(()=>{
-
-			// fallback to devTools.inspectedWindow.eval() !!!
-			tab.fallback = true;
-
-			// send any pending items back through the dev port ...
-			while ( tab.pending.length ) tab.devPort.postMessage( tab.pending.shift() );
 
 		});
 
 	}
 
 });
+
+

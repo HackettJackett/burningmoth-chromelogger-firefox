@@ -1,0 +1,198 @@
+@charset "UTF-8";
+/**
+ * Panel styles.
+ * @since 3.0
+ * @see https://acorn.firefox.com/latest/styles/color-MZHBVuZc#section-semantic-color-palette-c2
+ */
+:root {
+	--color-log: inherit;
+	--color-info: turquoise;
+	--color-warn: gold;
+	--color-error: crimson;
+
+	--color-bracket: magenta;
+	--color-key: cyan;
+	--color-string: lime;
+	--color-number: orangered;
+	--color-boolean: mediumpurple;
+	--color-null: silver;
+}
+
+@media ( prefers-color-scheme: light ) {
+
+	:root {
+		--color-key: dodgerblue;
+		--color-string: green;
+		--color-boolean: purple;
+		--color-null: slategray;
+	}
+
+}
+
+body {
+	margin: 0 0.25em;
+	background-color: var(--color-bg);
+	color: var(--color-fg);
+	font-family: "Segoe UI", "SF Pro Text", system-ui, sans-serif;
+	font-size: 13px;
+}
+
+/* list items */
+
+.console {
+	display: none;
+}
+
+.console.open,
+.console ul {
+	margin: 0;
+	list-style-position: inside;
+	list-style-type: none;
+	padding: 0.2em;
+	display: block;
+}
+
+.console:empty:before,
+.console li {
+	border-radius: 0.3em;
+	border-width: 1px;
+	border-style: solid;
+	border-color: var(--color-log);
+	margin-top: 0.3em;
+	padding: 0.5em;
+	position: relative;
+	overflow-x: auto;
+	word-break: break-all;
+}
+
+.console:empty:before {
+	display: list-item;
+	border-style: dashed;
+	content: "Parsed ChromeLogger messages display here.";
+}
+
+/* console.info */
+.info::marker {
+	content: "\2139\FE0F\00A0";
+}
+
+.console li.info {
+	border-color: var(--color-info);
+}
+
+
+/* console.warn */
+.warn::marker {
+	content: "\26A0\FE0F\00A0";
+}
+
+.console li.warn {
+	border-color: var(--color-warn);
+}
+
+
+/* console.error */
+.error::marker {
+	content: "\1F6D1\00A0";
+}
+
+.console li.error {
+	border-color: var(--color-error);
+}
+
+
+/* console.group, console.groupCollapsed */
+.group::marker {
+	content: "\25BC\00A0";
+}
+
+.group.collapsed::marker {
+	content: "\25B6\00A0";
+}
+
+.group.collapsed > ul {
+	display: none;
+}
+
+.console li.group {
+	border-style: dotted;
+}
+
+
+/* console.table */
+.console li.table {
+	padding: unset;
+	border: unset;
+	border-radius: unset;
+}
+
+.table table {
+	border-collapse: collapse;
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.table th,
+.table td {
+	border-width: 1px;
+	border-style: solid;
+	border-color: var(--color-fg);
+}
+
+.table th {
+	color: var(--color-key);
+}
+
+.table table {
+	border-radius: 1.25em;
+}
+
+.table th,
+.table td {
+	padding: 0.5em;
+}
+
+
+/* object styles */
+
+.bracket { color: var(--color-bracket); }
+.key { color: var(--color-key); }
+.number { color: var(--color-number); }
+.string { color: var(--color-string); }
+.boolean { color: var(--color-boolean); }
+.null { color: var(--color-null); }
+
+.tag { color: var(--color-bracket); }
+.namespace { color: var(--color-boolean); }
+.attribute { color: var(--color-key); }
+
+.object::before,
+.block::before {
+	cursor: pointer;
+	content: "\25B8";
+}
+
+.block::before {
+	content: "\25B9";
+}
+
+.object.expanded::before {
+	content: "\25BE";
+}
+
+.block.expanded::before {
+	content: "\25BF";
+}
+
+.object.expanded .block::before {
+	content: "";
+}
+
+.block {
+	white-space: normal;
+}
+
+.object.expanded .block,
+.block.expanded {
+	white-space: pre-wrap;
+}
